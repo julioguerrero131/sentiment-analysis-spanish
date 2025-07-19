@@ -1,10 +1,9 @@
 import pandas as pd
 from pysentimiento import create_analyzer
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-import os
 
 # Activar barra de progreso en pandas
 tqdm.pandas()

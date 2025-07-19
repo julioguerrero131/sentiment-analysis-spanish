@@ -1,11 +1,12 @@
-import nltk
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-from deep_translator import GoogleTranslator
-from sklearn.metrics import confusion_matrix
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+import pandas as pd
+from sklearn.metrics import confusion_matrix, classification_report
 import seaborn as sns
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
-#nltk.download('vader_lexicon')
+# Barra de Carga
+tqdm.pandas() 
 
 # Crear el analizador
 analyzer = SentimentIntensityAnalyzer()
@@ -13,8 +14,7 @@ analyzer = SentimentIntensityAnalyzer()
 # Función para clasificar con VADER traducido
 def vader_es(texto_es):
     try:
-        texto_en = GoogleTranslator(source='es', target='en').translate(texto_es)
-        score = analyzer.polarity_scores(texto_en)['compound']
+        score = analyzer.polarity_scores(texto_es)['compound']
         if score >= 0.05:
             return "positivo"
         elif score <= -0.05:
@@ -22,28 +22,38 @@ def vader_es(texto_es):
         else:
             return "neutral"
     except Exception as e:
-        return "error"
+        return "error vader_es"
 
-# === Datos de prueba ===
-textos = [
-    "Estoy muy feliz con el resultado",
-    "Esto es terrible y me siento mal",
-    "Está bien, nada fuera de lo normal",
-    "Me encanta este lugar",
-    "Odio cuando pasa esto",
-    "La experiencia fue regular"
-]
+# === Leer el CSV ===
+# Asegúrate de poner la ruta correcta al archivo
+df = pd.read_csv("data/ia_tweets.csv")
 
-etiquetas_reales = ["positivo", "negativo", "neutral", "positivo", "negativo", "neutral"]
+# Solo nos quedamos con los campos necesarios
+# Mapeamos la polaridad original a texto
+mapeo_polaridad = {
+    "P": "positivo",
+    "N": "negativo",
+    "NEU": "neutral"
+}
 
-# === Clasificación ===
-predicciones = [vader_es(texto) for texto in textos]
+# Filtramos y limpiamos
+df = df[df["polarity"].isin(mapeo_polaridad.keys())]
+df["label"] = df["polarity"].map(mapeo_polaridad)
+
+# === Clasificar con VADER ===
+print("Clasificando tweets con VADER en español...")
+df["pred"] = df["text"].progress_apply(vader_es)
+
+# Eliminamos filas donde ocurrió un error
+df = df[df["pred"] != "error"]
 
 # === Matriz de Confusión ===
 etiquetas = ["negativo", "neutral", "positivo"]
-matriz = confusion_matrix(etiquetas_reales, predicciones, labels=etiquetas)
+print("Creando la matriz...")
+matriz = confusion_matrix(df["label"], df["pred"], labels=etiquetas)
 
 # Visualización
+print("Matriz finalizada...")
 plt.figure(figsize=(6, 4))
 sns.heatmap(matriz, annot=True, fmt='d', cmap='Blues', xticklabels=etiquetas, yticklabels=etiquetas)
 plt.title("Matriz de Confusión - VADER con traducción")
@@ -51,3 +61,8 @@ plt.xlabel("Predicho")
 plt.ylabel("Real")
 plt.tight_layout()
 plt.show()
+
+# Reporte de clasificación
+print("\nReporte de clasificación:\n")
+print(classification_report(df["label"], df["pred"], target_names=etiquetas))
+print("Reporte Realizado.")

@@ -3,55 +3,53 @@ from pysentimiento import create_analyzer
 from sklearn.metrics import confusion_matrix, classification_report
 import seaborn as sns
 import matplotlib.pyplot as plt
+from tqdm import tqdm
+import os
+
+# Activar barra de progreso en pandas
+tqdm.pandas()
 
 # Crear el analizador de sentimientos en español
 analyzer = create_analyzer(task="sentiment", lang="es")
 
-# --------------------
-# Dataset de ejemplo
-# --------------------
-# Lista de tweets con su sentimiento real (etiqueta)
-data = [
-    {"tweet": "Me encanta este producto, es genial", "label": "POS"},
-    {"tweet": "Este servicio fue terrible", "label": "NEG"},
-    {"tweet": "No estuvo mal, pero tampoco excelente", "label": "NEU"},
-    {"tweet": "Odio cuando pasa esto", "label": "NEG"},
-    {"tweet": "Estoy feliz con los resultados", "label": "POS"},
-    {"tweet": "Todo fue como esperaba", "label": "NEU"},
-    {"tweet": "La atención al cliente fue pésima", "label": "NEG"},
-    {"tweet": "Qué maravilla de experiencia", "label": "POS"},
-    {"tweet": "Nada especial, fue común", "label": "NEU"},
-    {"tweet": "Nunca volveré a usar esto", "label": "NEG"}
-]
+# === Leer el CSV ===
+df = pd.read_csv("data/ia_tweets.csv")
 
-df = pd.DataFrame(data)
+# Mapeo de etiquetas originales
+mapeo_polaridad = {
+    "P": "POS",
+    "N": "NEG",
+    "NEU": "NEU"
+}
 
-# --------------------------
-# Obtener predicciones
-# --------------------------
-# Predecimos el sentimiento para cada tweet
-df["pred"] = df["tweet"].apply(lambda x: analyzer.predict(x).output)
+# Filtrar y mapear polaridades válidas
+df = df[df["polarity"].isin(mapeo_polaridad.keys())]
+df["label"] = df["polarity"].map(mapeo_polaridad)
 
-# --------------------------
-# Evaluación
-# --------------------------
-# Convertimos a listas
-y_true = df["label"].tolist()
-y_pred = df["pred"].tolist()
+# === Clasificación con pysentimiento ===
+def clasificar_sentimiento(texto):
+    try:
+        return analyzer.predict(texto).output
+    except Exception as e:
+        return "ERROR"
 
-# Generar matriz de confusión
-cm = confusion_matrix(y_true, y_pred, labels=["POS", "NEU", "NEG"])
-labels = ["Positivo", "Neutro", "Negativo"]
+print("Clasificando tweets con pysentimiento...")
+df["pred"] = df["text"].progress_apply(clasificar_sentimiento)
 
-# Mostrar matriz de confusión con seaborn
+# Eliminar errores
+df = df[df["pred"] != "ERROR"]
+
+# === Evaluación ===
+etiquetas_modelo = ["POS", "NEU", "NEG"]
+etiquetas_visuales = ["Positivo", "Neutro", "Negativo"]
+
+# Matriz de Confusión
+cm = confusion_matrix(df["label"], df["pred"], labels=etiquetas_modelo)
+
 plt.figure(figsize=(6, 4))
-sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=labels, yticklabels=labels)
+sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=etiquetas_visuales, yticklabels=etiquetas_visuales)
 plt.xlabel("Predicción")
 plt.ylabel("Real")
-plt.title("Matriz de Confusión - Análisis de Sentimiento")
+plt.title("Matriz de Confusión - pysentimiento")
 plt.tight_layout()
 plt.show()
-
-# Reporte detallado
-print("Reporte de clasificación:\n")
-print(classification_report(y_true, y_pred, target_names=labels))

@@ -12,7 +12,7 @@ tqdm.pandas()
 analyzer = create_analyzer(task="sentiment", lang="es")
 
 # === Leer el CSV ===
-df = pd.read_csv("data/ia_tweets.csv")
+df = pd.read_csv("data/ia_tweets_500.csv")
 
 # Mapeo de etiquetas originales
 mapeo_polaridad = {

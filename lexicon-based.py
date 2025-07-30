@@ -26,7 +26,7 @@ def vader_es(texto_es):
 
 # === Leer el CSV ===
 # Asegúrate de poner la ruta correcta al archivo
-df = pd.read_csv("data/ia_tweets.csv")
+df = pd.read_csv("data/ia_tweets_500.csv")
 
 # Solo nos quedamos con los campos necesarios
 # Mapeamos la polaridad original a texto

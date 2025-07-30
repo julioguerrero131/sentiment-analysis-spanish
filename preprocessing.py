@@ -1,4 +1,5 @@
 import pandas as pd
+import re
 
 #### CANTIDAD DE POSITIVOS, NEGATIVOS Y NEUTRALES
 
@@ -20,20 +21,41 @@ print(f"Neutrales: {NEU}")
 
 
 
-#### OBTENER NUEVO ARCHIVO CSV
+### OBTENER NUEVO ARCHIVO CSV
 
-# # Cargar el CSV original
-# df = pd.read_csv('data/ia_tweets.csv')
+# Función para limpiar texto
+def limpiar_texto(texto):
+    # Eliminar URLs
+    texto = re.sub(r'http\S+|www\.\S+', '', texto)
+    # Eliminar menciones
+    texto = re.sub(r'@\w+', '', texto)
+    # Eliminar múltiples espacios
+    texto = re.sub(r'\s+', ' ', texto).strip()
+    return texto
 
-# # Filtrar los primeros 500 de cada tipo de polaridad
-# positivos = df[df['polarity'] == 'P'].head(500)
-# negativos = df[df['polarity'] == 'N'].head(500)
-# neutrales = df[df['polarity'] == 'NEU'].head(500)
+# Función para contar tokens significativos (al menos 3)
+def es_valido(texto):
+    tokens = re.findall(r'\b\w+\b', texto)
+    return len(tokens) >= 3
 
-# # Concatenar los tres DataFrames
-# resultado = pd.concat([positivos, negativos, neutrales])
+# Cargar el CSV original
+df = pd.read_csv('data/ia_tweets.csv')
 
-# # Guardar en un nuevo archivo CSV
-# resultado.to_csv('data/ia_tweets_500.csv', index=False)
+# Limpiar texto
+df['text'] = df['text'].astype(str).apply(limpiar_texto)
 
-# print("Archivo generado: ia_tweets_500.csv")
+# Filtrar solo los que tengan 3 o más tokens significativos
+df = df[df['text'].apply(es_valido)]
+
+# Filtrar los primeros 500 de cada tipo de polaridad
+positivos = df[df['polarity'] == 'P'].head(500)
+negativos = df[df['polarity'] == 'N'].head(500)
+neutrales = df[df['polarity'] == 'NEU'].head(500)
+
+# Concatenar los tres DataFrames
+resultado = pd.concat([positivos, negativos, neutrales])
+
+# Guardar en un nuevo archivo CSV
+resultado.to_csv('data/ia_tweets_500.csv', index=False)
+
+print("Archivo generado: ia_tweets_500.csv")

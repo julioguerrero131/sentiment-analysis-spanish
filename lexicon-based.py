@@ -1,6 +1,6 @@
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import pandas as pd
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import classification_report, accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -47,10 +47,28 @@ df["pred"] = df["text"].progress_apply(vader_es)
 # Eliminamos filas donde ocurrió un error
 df = df[df["pred"] != "error"]
 
+# === Métricas ===
+print("\n=== MÉTRICAS DE CLASIFICACIÓN ===")
+
 # === Matriz de Confusión ===
 etiquetas = ["negativo", "neutral", "positivo"]
 print("Creando la matriz...")
 matriz = confusion_matrix(df["label"], df["pred"], labels=etiquetas)
+
+# Reporte completo
+reporte = classification_report(df["label"], df["pred"], labels=etiquetas, zero_division=0)
+print(reporte)
+
+# Métricas individuales
+accuracy = accuracy_score(df["label"], df["pred"])
+precision = precision_score(df["label"], df["pred"], average='macro', zero_division=0)
+recall = recall_score(df["label"], df["pred"], average='macro', zero_division=0)
+f1 = f1_score(df["label"], df["pred"], average='macro', zero_division=0)
+
+print(f"Accuracy : {accuracy:.4f}")
+print(f"Precision: {precision:.4f}")
+print(f"Recall   : {recall:.4f}")
+print(f"F1-Score : {f1:.4f}")
 
 # Visualización
 print("Matriz finalizada...")
